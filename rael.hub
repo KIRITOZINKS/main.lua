@@ -6,29 +6,16 @@ local permittedUsers = {
     ["ExemploDeAmigo"] = true,
 }
 
--- Proteção contra execução não autorizada
+-- Proteção contra cópia (sem kick)
 local function detectUnauthorizedUse()
-    local placeIdWhitelist = {
-        -- IDs dos jogos autorizados, se quiser restringir
-        [0000000000] = true, -- substitua por um ID real se quiser
-    }
-
-    if not permittedUsers[LocalPlayer.Name] then
-        warn("Usuário não autorizado tentou usar o script: " .. LocalPlayer.Name)
-        LocalPlayer:Kick("Acesso negado.")
-        return true
-    end
-
-    -- Proteção adicional contra cópia
     if not pcall(function() assert(getfenv) end) or not getfenv then
-        LocalPlayer:Kick("Tentativa de cópia detectada.")
+        warn("Tentativa de cópia detectada por: " .. LocalPlayer.Name)
         return true
     end
-
     return false
 end
 
-if detectUnauthorizedUse() then return end
+detectUnauthorizedUse()
 
 -- ESP manual
 local function createESP(player)
@@ -64,8 +51,8 @@ local function enableESP()
     end)
 end
 
--- Comandos via Chat
-if LocalPlayer.Name == owner then
+-- Comandos via Chat (apenas admins)
+if permittedUsers[LocalPlayer.Name] then
     LocalPlayer.Chatted:Connect(function(msg)
         local args = string.split(msg, " ")
         local command = args[1]:lower()
@@ -113,5 +100,5 @@ if LocalPlayer.Name == owner then
     end)
 end
 
--- Executa seu Hub externo normalmente
+-- Executa o Hub externo para todos
 loadstring(game:HttpGet("https://raw.githubusercontent.com/Laelmano24/Rael-Hub/main/main.txt"))()
