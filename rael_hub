@@ -1,0 +1,27 @@
+-- Carrega o Rael Hub
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Laelmano24/Rael-Hub/main/main.txt"))()
+
+-- Sistema global de /kill
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- Verifica constantemente se o /kill foi ativado
+spawn(function()
+    while true do
+        if _G.KillNow then
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("Humanoid") then
+                char.Humanoid.Health = 0
+            end
+            break
+        end
+        wait(1)
+    end
+end)
+
+-- Comando /kill via chat
+LocalPlayer.Chatted:Connect(function(msg)
+    if msg:lower() == "/kill" then
+        _G.KillNow = true
+    end
+end)
