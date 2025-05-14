@@ -1,57 +1,67 @@
--- Proteção simples
-if not game:IsLoaded() then game.Loaded:Wait() end
-
--- Lista de administradores
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 local admins = {["antimandrak"] = true}
 
--- Verificação de permissão
-local function isAdmin(plr)
-    return admins[plr.Name] == true
+local function isAdmin(player)
+    return admins[player.Name]
 end
 
--- Comandos
+-- Comandos disponíveis
 local commands = {
-    kill = function(target)
+    ["/kill"] = function(target)
         if target.Character and target.Character:FindFirstChild("Humanoid") then
             target.Character.Humanoid.Health = 0
         end
     end,
-    bring = function(target, plr)
-        if target.Character and target.Character:FindFirstChild("HumanoidRootPart") and plr.Character then
-            target.Character.HumanoidRootPart.CFrame = plr.Character.HumanoidRootPart.CFrame
+    ["/bring"] = function(target)
+        if target.Character and LocalPlayer.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            target.Character:MoveTo(LocalPlayer.Character:GetPrimaryPartCFrame().Position + Vector3.new(2, 0, 0))
         end
     end,
-    freeze = function(target)
-        if target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-            target.Character.HumanoidRootPart.Anchored = true
+    ["/goto"] = function(target)
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            LocalPlayer.Character:MoveTo(target.Character:GetPrimaryPartCFrame().Position)
         end
     end,
-    goto = function(target, plr)
-        if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and target.Character then
-            plr.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame
+    ["/freeze"] = function(target)
+        for _, part in pairs(target.Character:GetChildren()) do
+            if part:IsA("BasePart") then
+                part.Anchored = true
+            end
+        end
+    end,
+    ["/unfreeze"] = function(target)
+        for _, part in pairs(target.Character:GetChildren()) do
+            if part:IsA("BasePart") then
+                part.Anchored = false
+            end
         end
     end
 }
 
--- Monitor de comandos via chat
-game.Players.PlayerAdded:Connect(function(plr)
-    plr.Chatted:Connect(function(msg)
-        if not isAdmin(plr) then return end
+-- Escutar mensagens do dono
+LocalPlayer.Chatted:Connect(function(message)
+    if not isAdmin(LocalPlayer) then return end
 
-        local args = msg:split(" ")
-        local cmd = args[1]:sub(2):lower()
-        local targetName = args[2]
+    local args = message:split(" ")
+    local command = args[1]:lower()
+    local targetName = args[2]
 
-        if commands[cmd] then
-            local target = game.Players:FindFirstChild(targetName)
-            if target and not isAdmin(target) then
-                commands[cmd](target, plr)
-            end
+    local target
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr.Name:lower():sub(1, #targetName) == targetName:lower() then
+            target = plr
+            break
         end
-    end)
+    end
+
+    if target and commands[command] and not isAdmin(target) then
+        commands[command](target)
+        print("Comando executado:", command, "em", target.Name)
+    end
 end)
 
--- Executa script externo normalmente para quem não tem permissão
-if not isAdmin(game.Players.LocalPlayer) then
+-- Se não for admin, carrega apenas o outro Hub
+if not isAdmin(LocalPlayer) then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/KIRITOZINKS/main.lua/main/rael.hub"))()
 end
