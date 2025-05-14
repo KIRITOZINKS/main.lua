@@ -1,69 +1,117 @@
--- Proteção contra cópia
-if not game:IsLoaded() then game.Loaded:Wait() end
-if game:GetService("RunService"):IsStudio() then return end
-if not identifyexecutor then return end
-if identifyexecutor():lower():find("synapse") == nil then
-    warn("Executor não suportado.")
-    return
-end
-
--- Lista de administradores
-local admins = {["antimandrak"] = true}
-
--- Função utilitária
-local function isAdmin(plr)
-    return admins[plr.Name] ~= nil
-end
-
--- Comandos
-local commands = {
-    kill = function(target)
-        if target.Character and target.Character:FindFirstChild("Humanoid") then
-            target.Character.Humanoid.Health = 0
-        end
-    end,
-    bring = function(target, plr)
-        if target.Character and target.Character:FindFirstChild("HumanoidRootPart") and plr.Character then
-            target.Character.HumanoidRootPart.CFrame = plr.Character.HumanoidRootPart.CFrame
-        end
-    end,
-    freeze = function(target)
-        if target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-            target.Character.HumanoidRootPart.Anchored = true
-        end
-    end,
-    goto = function(target, plr)
-        if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and target.Character then
-            plr.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame
-        end
-    end
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local owner = "antimandrak"
+local permittedUsers = {
+    [owner] = true,
+    ["ExemploDeAmigo"] = true,
 }
 
--- Monitor de mensagens
-game.Players.PlayerAdded:Connect(function(plr)
-    plr.Chatted:Connect(function(msg)
-        if not isAdmin(plr) then
-            plr:SendNotification({Title="Sem permissão", Text="Você não tem permissão para usar comandos."})
+-- Proteção contra execução não autorizada
+local function detectUnauthorizedUse()
+    local placeIdWhitelist = {
+        -- IDs dos jogos autorizados, se quiser restringir
+        [0000000000] = true, -- substitua por um ID real se quiser
+    }
+
+    if not permittedUsers[LocalPlayer.Name] then
+        warn("Usuário não autorizado tentou usar o script: " .. LocalPlayer.Name)
+        LocalPlayer:Kick("Acesso negado.")
+        return true
+    end
+
+    -- Proteção adicional contra cópia
+    if not pcall(function() assert(getfenv) end) or not getfenv then
+        LocalPlayer:Kick("Tentativa de cópia detectada.")
+        return true
+    end
+
+    return false
+end
+
+if detectUnauthorizedUse() then return end
+
+-- ESP manual
+local function createESP(player)
+    if player == LocalPlayer then return end
+    local box = Instance.new("BillboardGui")
+    box.Name = "ESP"
+    box.Adornee = player.Character:WaitForChild("Head")
+    box.Size = UDim2.new(0, 100, 0, 40)
+    box.AlwaysOnTop = true
+
+    local text = Instance.new("TextLabel", box)
+    text.Size = UDim2.new(1, 0, 1, 0)
+    text.Text = player.Name
+    text.TextColor3 = Color3.fromRGB(255, 0, 0)
+    text.BackgroundTransparency = 1
+    text.TextStrokeTransparency = 0.5
+
+    box.Parent = player.Character
+end
+
+local espEnabled = false
+local function enableESP()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Character then
+            createESP(player)
+        end
+    end
+
+    Players.PlayerAdded:Connect(function(player)
+        player.CharacterAdded:Connect(function()
+            createESP(player)
+        end)
+    end)
+end
+
+-- Comandos via Chat
+if LocalPlayer.Name == owner then
+    LocalPlayer.Chatted:Connect(function(msg)
+        local args = string.split(msg, " ")
+        local command = args[1]:lower()
+        local targetName = args[2]
+
+        local function getTarget(name)
+            for _, plr in ipairs(Players:GetPlayers()) do
+                if plr.Name:lower():sub(1, #name) == name:lower() then
+                    return plr
+                end
+            end
+        end
+
+        local target = getTarget(targetName)
+
+        if target and permittedUsers[target.Name] then
+            warn("Ignorado: " .. target.Name .. " tem permissão.")
             return
         end
 
-        local args = msg:split(" ")
-        local cmd = args[1]:sub(2):lower()
-        local targetName = args[2]
-
-        if commands[cmd] then
-            local target = game.Players:FindFirstChild(targetName)
-            if target and not isAdmin(target) then
-                commands[cmd](target, plr)
-                plr:SendNotification({Title="Comando executado", Text=cmd.." executado com sucesso."})
-            else
-                plr:SendNotification({Title="Erro", Text="Jogador inválido ou protegido."})
+        if command == "/kill" and target then
+            target.Character.Humanoid.Health = 0
+        elseif command == "/tp" and target then
+            LocalPlayer.Character:MoveTo(target.Character:GetPrimaryPartCFrame().Position)
+        elseif command == "/bring" and target then
+            target.Character:MoveTo(LocalPlayer.Character:GetPrimaryPartCFrame().Position + Vector3.new(2, 0, 0))
+        elseif command == "/freeze" and target then
+            for _, part in pairs(target.Character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.Anchored = true
+                end
+            end
+        elseif command == "/unfreeze" and target then
+            for _, part in pairs(target.Character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.Anchored = false
+                end
+            end
+        elseif command == "/esp" then
+            if not espEnabled then
+                espEnabled = true
+                enableESP()
             end
         end
     end)
-end)
-
--- Caso o jogador não tenha permissão, ele ainda executa o script externo
-if not isAdmin(game.Players.LocalPlayer) then
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/KIRITOZINKS/main.lua/main/rael.hub"))()
 end
+
+-- Executa seu Hub externo normalmente
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Laelmano24/Rael-Hub/main/main.txt"))()
