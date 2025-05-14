@@ -1,104 +1,47 @@
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local owner = "antimandrak"
-local permittedUsers = {
-    [owner] = true,
-    ["ExemploDeAmigo"] = true,
+
+-- Lista de administradores e jogadores imunes
+local admins = {
+    ["antimandrak"] = true, -- Admin + imune
+    ["ExemploDeAdmin"] = true,
 }
 
--- Proteção contra cópia (sem kick)
-local function detectUnauthorizedUse()
-    if not pcall(function() assert(getfenv) end) or not getfenv then
-        warn("Tentativa de cópia detectada por: " .. LocalPlayer.Name)
-        return true
-    end
-    return false
+-- Função utilitária
+local function isAdmin(name)
+    return admins[name] == true
 end
 
-detectUnauthorizedUse()
-
--- ESP manual
-local function createESP(player)
-    if player == LocalPlayer then return end
-    local box = Instance.new("BillboardGui")
-    box.Name = "ESP"
-    box.Adornee = player.Character:WaitForChild("Head")
-    box.Size = UDim2.new(0, 100, 0, 40)
-    box.AlwaysOnTop = true
-
-    local text = Instance.new("TextLabel", box)
-    text.Size = UDim2.new(1, 0, 1, 0)
-    text.Text = player.Name
-    text.TextColor3 = Color3.fromRGB(255, 0, 0)
-    text.BackgroundTransparency = 1
-    text.TextStrokeTransparency = 0.5
-
-    box.Parent = player.Character
-end
-
-local espEnabled = false
-local function enableESP()
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player.Character then
-            createESP(player)
+-- Pega jogador pelo nome parcial
+local function getPlayer(name)
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr.Name:lower():sub(1, #name) == name:lower() then
+            return plr
         end
     end
-
-    Players.PlayerAdded:Connect(function(player)
-        player.CharacterAdded:Connect(function()
-            createESP(player)
-        end)
-    end)
 end
 
--- Comandos via Chat (apenas admins)
-if permittedUsers[LocalPlayer.Name] then
-    LocalPlayer.Chatted:Connect(function(msg)
-        local args = string.split(msg, " ")
-        local command = args[1]:lower()
-        local targetName = args[2]
+-- Conexão do chat
+LocalPlayer.Chatted:Connect(function(msg)
+    local args = string.split(msg, " ")
+    local command = args[1]:lower()
+    local targetName = args[2]
+    local target = getPlayer(targetName)
 
-        local function getTarget(name)
-            for _, plr in ipairs(Players:GetPlayers()) do
-                if plr.Name:lower():sub(1, #name) == name:lower() then
-                    return plr
-                end
-            end
-        end
+    if not isAdmin(LocalPlayer.Name) then return end
+    if not target then warn("Jogador não encontrado.") return end
+    if isAdmin(target.Name) then warn("Jogador imune: " .. target.Name) return end
 
-        local target = getTarget(targetName)
-
-        if target and permittedUsers[target.Name] then
-            warn("Ignorado: " .. target.Name .. " tem permissão.")
-            return
-        end
-
-        if command == "/kill" and target then
+    if command == "/kill" then
+        if target.Character and target.Character:FindFirstChild("Humanoid") then
             target.Character.Humanoid.Health = 0
-        elseif command == "/tp" and target then
-            LocalPlayer.Character:MoveTo(target.Character:GetPrimaryPartCFrame().Position)
-        elseif command == "/bring" and target then
-            target.Character:MoveTo(LocalPlayer.Character:GetPrimaryPartCFrame().Position + Vector3.new(2, 0, 0))
-        elseif command == "/freeze" and target then
-            for _, part in pairs(target.Character:GetChildren()) do
-                if part:IsA("BasePart") then
-                    part.Anchored = true
-                end
-            end
-        elseif command == "/unfreeze" and target then
-            for _, part in pairs(target.Character:GetChildren()) do
-                if part:IsA("BasePart") then
-                    part.Anchored = false
-                end
-            end
-        elseif command == "/esp" then
-            if not espEnabled then
-                espEnabled = true
-                enableESP()
-            end
+            warn("Jogador " .. target.Name .. " morto com sucesso.")
         end
-    end)
-end
+    elseif command == "/kick" then
+        target:Kick("Você foi expulso pelo admin.")
+        warn("Jogador " .. target.Name .. " foi kickado com sucesso.")
+    end
+end)
 
--- Executa o Hub externo para todos
+-- Executa seu Hub principal normalmente
 loadstring(game:HttpGet("https://raw.githubusercontent.com/Laelmano24/Rael-Hub/main/main.txt"))()
