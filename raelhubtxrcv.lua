@@ -1,23 +1,26 @@
-loadstring(game:HttpGet("https://raw.githubusercontent.com/Laelmano24/Rael-Hub/main/main.txt"))()
-
 local Players = game:GetService("Players")
 
--- Agora, todo jogador que entrar já está autorizado
+-- Lista de usuários autorizados
+local authorizedUsers = {
+    ["antimandrak"] = true
+}
+
 local function isAuthorized(player)
-    return true -- Todos autorizados
+    return authorizedUsers[player.Name:lower()] == true
 end
 
+local frozenPlayers = {}
+local noclipPlayers = {}
+
 local function getPlayerByName(name)
+    name = name:lower()
     for _, player in pairs(Players:GetPlayers()) do
-        if player.Name:lower():find(name:lower()) then
+        if player.Name:lower():find(name) then
             return player
         end
     end
     return nil
 end
-
-local frozenPlayers = {}
-local noclipPlayers = {}
 
 local function arrestPlayer(target)
     if target and target.Character then
@@ -104,16 +107,6 @@ local function setWalkSpeed(player, speed)
             humanoid.WalkSpeed = speed
         end
     end
-end
-
-local function getPlayerByName(name)
-    name = name:lower()
-    for _, player in pairs(Players:GetPlayers()) do
-        if player.Name:lower():find(name) then
-            return player
-        end
-    end
-    return nil
 end
 
 local function onPlayerChatted(player, message)
